@@ -75,7 +75,7 @@ const setNotes = async (order_number, filtered_products, note, customer) => {
           ${
             product.infinite_options.length > 0 &&
             product.infinite_options.map(
-              (io) => `<li>Infinite Options: ${io.value}</li>`
+              (io) => `<li>${io.name}: ${io.value}</li>`
             )
           }
         </ul>

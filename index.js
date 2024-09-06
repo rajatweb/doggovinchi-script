@@ -55,10 +55,6 @@ function getDigitalPurchaseOrPriorityOrder(product) {
   return false;
 }
 
-function getInfiniteOptions(properties) {
-  return properties.filter((res) => !res.name.includes("_Uploaded"));
-}
-
 function filteredProducts(products, order_number) {
   return products.map((product) => {
     const { id, title, price, quantity, sku, properties, variant_id, product_id } = product;
@@ -70,7 +66,7 @@ function filteredProducts(products, order_number) {
       price,
       quantity,
       sku,
-      infinite_options: getInfiniteOptions(properties),
+      infinite_options: properties,
       images: getImagesFromProducts(properties, id, order_number),
       is_digital_purchased: getDigitalPurchaseOrPriorityOrder(product),
     };
