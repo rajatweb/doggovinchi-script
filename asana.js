@@ -41,6 +41,7 @@ const getActiveProjects = async (wgid) => {
   };
   const response = projectsApiInstance.getProjects(opts).then(
     (result) => {
+      // result.data.map(d => console.log(d.members));
       return result.data[0].gid;
     },
     (error) => {
@@ -108,7 +109,7 @@ const createTask = async (order, note) => {
       html_notes: await setNotes(order_number, filtered_products, note, customer),
       is_rendered_as_separator: false,
       liked: false,
-      assignee: "me",
+      assignee: "1139909121053471",
       projects: [pgid],
     },
   };
