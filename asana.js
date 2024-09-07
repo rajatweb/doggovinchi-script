@@ -75,7 +75,11 @@ const setNotes = async (order_number, filtered_products, note, customer) => {
           ${
             product.infinite_options.length > 0 &&
             product.infinite_options.map(
-              (io) => `<li>${io.name}: ${io.value}</li>`
+              (io) => {
+                const isHref = io.value.includes("https://");
+                const anchor = isHref ? `<a href=\"${io.value}\">View image</a>` : io.value;
+                return `<li>${io.name}: ${anchor}</li>`
+              }
             )
           }
         </ul>
