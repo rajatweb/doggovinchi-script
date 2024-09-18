@@ -104,6 +104,7 @@ app.post("/webhook", async (req, res) => {
     ),
     customer: body.customer
   };
+  
   const asanaTask = await asana.createTask(orderData, body.note);
 
   if (asanaTask) {

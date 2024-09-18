@@ -52,6 +52,27 @@ const getActiveProjects = async (wgid) => {
   return response;
 };
 
+const getTasks = async (wgid, pgid) => {
+  let opts = {
+    limit: 5,
+    workspace: wgid,
+    assignee: '1139909121053471',
+    opt_fields:
+      "actual_time_minutes,approval_status,assignee,assignee.name,assignee_section,assignee_section.name,assignee_status,completed,completed_at,completed_by,completed_by.name,created_at,created_by,custom_fields,custom_fields.asana_created_field,custom_fields.created_by,custom_fields.created_by.name,custom_fields.currency_code,custom_fields.custom_label,custom_fields.custom_label_position,custom_fields.date_value,custom_fields.date_value.date,custom_fields.date_value.date_time,custom_fields.description,custom_fields.display_value,custom_fields.enabled,custom_fields.enum_options,custom_fields.enum_options.color,custom_fields.enum_options.enabled,custom_fields.enum_options.name,custom_fields.enum_value,custom_fields.enum_value.color,custom_fields.enum_value.enabled,custom_fields.enum_value.name,custom_fields.format,custom_fields.has_notifications_enabled,custom_fields.id_prefix,custom_fields.is_formula_field,custom_fields.is_global_to_workspace,custom_fields.is_value_read_only,custom_fields.multi_enum_values,custom_fields.multi_enum_values.color,custom_fields.multi_enum_values.enabled,custom_fields.multi_enum_values.name,custom_fields.name,custom_fields.number_value,custom_fields.people_value,custom_fields.people_value.name,custom_fields.precision,custom_fields.representation_type,custom_fields.resource_subtype,custom_fields.text_value,custom_fields.type,dependencies,dependents,due_at,due_on,external,external.data,followers,followers.name,hearted,hearts,hearts.user,hearts.user.name,html_notes,is_rendered_as_separator,liked,likes,likes.user,likes.user.name,memberships,memberships.project,memberships.project.name,memberships.section,memberships.section.name,modified_at,name,notes,num_hearts,num_likes,num_subtasks,offset,parent,parent.created_by,parent.name,parent.resource_subtype,path,permalink_url,projects,projects.name,resource_subtype,start_at,start_on,tags,tags.name,uri,workspace,workspace.name",
+  };
+
+  const response =tasksApiInstance.getTasks(opts).then(
+    (result) => {
+      return result.data
+    },
+    (error) => {
+      console.error(error.response.body);
+    }
+  );
+
+  return response
+};
+
 const setName = (number, length) => {
   if (length < 1) {
     return `${number}`;
@@ -64,24 +85,34 @@ const setNotes = async (order_number, filtered_products, note, customer) => {
   body += `<ul>
           <li><b>Customer Detail:</b></li>
           <li>Order No: #${order_number}</li>
-          <li>Name: <a href="https://admin.shopify.com/store/doggovinci/customers/${customer.id}" target="__blank">${customer.first_name} ${customer.last_name}</a></li>
-          <li>Email: <a href="mailto:${customer.email}">${customer.email}</a></li>
-          <li>Client Note: ${note ? note : 'No notes from customer'}</li>
+          <li>Name: <a href="https://admin.shopify.com/store/doggovinci/customers/${
+            customer.id
+          }" target="__blank">${customer.first_name} ${
+    customer.last_name
+  }</a></li>
+          <li>Email: <a href="mailto:${customer.email}">${
+    customer.email
+  }</a></li>
+          <li>Client Note: ${note ? note : "No notes from customer"}</li>
     </ul>`;
   body += filtered_products.map(
     (product) => `
-        <strong><a href="https://admin.shopify.com/store/doggovinci/products/${product.product_id}/variants/${product.variant_id}" target="__blank">${product.title}</a></strong>
+        <strong><a href="https://admin.shopify.com/store/doggovinci/products/${
+          product.product_id
+        }/variants/${product.variant_id}" target="__blank">${
+      product.title
+    }</a></strong>
         <ul>
-          <li>SKU: ${product.sku ? product.sku : 'NA'}</li>
+          <li>SKU: ${product.sku ? product.sku : "NA"}</li>
           ${
             product.infinite_options.length > 0 &&
-            product.infinite_options.map(
-              (io) => {
-                const isHref = io.value.includes("https://");
-                const anchor = isHref ? `<a href=\"${io.value}\">View image</a>` : io.value;
-                return `<li>${io.name}: ${anchor}</li>`
-              }
-            )
+            product.infinite_options.map((io) => {
+              const isHref = io.value.includes("https://");
+              const anchor = isHref
+                ? `<a href=\"${io.value}\">View image</a>`
+                : io.value;
+              return `<li>${io.name}: ${anchor}</li>`;
+            })
           }
         </ul>
     `
@@ -93,6 +124,8 @@ const setNotes = async (order_number, filtered_products, note, customer) => {
 const createTask = async (order, note) => {
   const wgid = await getWorkspaces();
   const pgid = await getActiveProjects(wgid);
+  const tgid = await getTasks(wgid, pgid);
+  let isOrderExists = false;
 
   if (!pgid) {
     return;
@@ -100,13 +133,24 @@ const createTask = async (order, note) => {
 
   const { order_number, filtered_products, customer } = order;
 
+  if(tgid) {
+    tgid.forEach(t => {
+      isOrderExists = t.name.includes(order_number)
+    });
+  }
+
   let body = {
     data: {
       name: setName(order_number, filtered_products.length),
       approval_status: "pending",
       assignee_status: "upcoming",
       completed: false,
-      html_notes: await setNotes(order_number, filtered_products, note, customer),
+      html_notes: await setNotes(
+        order_number,
+        filtered_products,
+        note,
+        customer
+      ),
       is_rendered_as_separator: false,
       liked: false,
       assignee: "1139909121053471",
@@ -115,6 +159,9 @@ const createTask = async (order, note) => {
   };
   let opts = {};
 
+  if(isOrderExists) {
+    return true;
+  }
   // POST - Create a task
   const response = await tasksApiInstance.createTask(body, opts);
 
