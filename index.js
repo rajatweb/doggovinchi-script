@@ -2,6 +2,10 @@ var express = require("express");
 var app = express();
 var bodyParser = require("body-parser");
 const asana = require("./asana");
+require('./db');
+
+const Order = require('./models/order');
+const orderCtrl = require('./order.controller');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -21,7 +25,7 @@ function getImagesUrl(url, pid, order_number) {
       return {
         pid,
         key: random,
-        preview_url: `https://files.getuploadkit.com/${id}/${uu}/${pid}-${random}.jpg?preview=1`
+        preview_url: `https://files.getuploadkit.com/${id}/${uu}/${pid}-${random}.jpg?preview=1`,
       };
     }
 
@@ -57,7 +61,16 @@ function getDigitalPurchaseOrPriorityOrder(product) {
 
 function filteredProducts(products, order_number) {
   return products.map((product) => {
-    const { id, title, price, quantity, sku, properties, variant_id, product_id } = product;
+    const {
+      id,
+      title,
+      price,
+      quantity,
+      sku,
+      properties,
+      variant_id,
+      product_id,
+    } = product;
     return {
       id,
       product_id,
@@ -87,6 +100,10 @@ function getTrackingDetails(fulfillments) {
 app.post("/webhook", async (req, res) => {
   const { body } = req;
 
+  const isOrderAlready = await Order.find({
+    order_number: body.order_number,
+  });
+
   const orderData = {
     id: body.id,
     order_number: body.order_number,
@@ -102,13 +119,18 @@ app.post("/webhook", async (req, res) => {
       body.line_items,
       body.order_number
     ),
-    customer: body.customer
+    customer: body.customer,
   };
-  
-  const asanaTask = await asana.createTask(orderData, body.note);
 
-  if (asanaTask) {
-    return res.send("ok");
+  if (isOrderAlready.length === 0) {
+    const asanaTask = await asana.createTask(orderData, body.note);
+    orderData.task_id = asanaTask.gid;
+    if (asanaTask) {
+      const createOrder = await orderCtrl.create(orderData);
+      res.send("OK");
+    }
+  } else {
+    res.send("Order Already Exists");
   }
 });
 
